@@ -3,11 +3,12 @@
    posts to a Google Form in the background. Configure GF below.
 
    ── HOW TO CONNECT (2 min, free, unlimited, anonymous) ───────────────────────
-   1. Create a Google Form (forms.google.com) with 4 questions IN THIS ORDER:
+   1. Create a Google Form (forms.google.com) with 5 questions IN THIS ORDER:
         Q1  Short answer  — "Rating (1-5)"
-        Q2  Multiple choice — "Would you use Bygrest?"  options: Yes / Maybe / No
-        Q3  Paragraph    — "What's missing / what would make it useful?"
-        Q4  Short answer  — "Context"   (language/screen, filled automatically)
+        Q2  Multiple choice — "I am"      options: Company/tradesperson / Private / Other
+        Q3  Multiple choice — "Interested as"  options: Seller / Buyer / Both / Not for me
+        Q4  Paragraph    — "What would you list or buy — or what stops you?"
+        Q5  Short answer  — "Context"   (language/screen, filled automatically)
       In Settings, make sure "Collect email addresses" is OFF (anonymous).
    2. Click the ⋮ menu → "Get pre-filled link", type dummy answers, "Get link".
       The copied URL contains entry.NUMBERS for each question.
@@ -21,10 +22,11 @@
 const GF = {
   action: "",                  // e.g. "https://docs.google.com/forms/d/e/FORM_ID/formResponse"
   fields: {
-    rating: "entry.000000001", // Q1
-    intent: "entry.000000002", // Q2
-    comment: "entry.000000003",// Q3
-    context: "entry.000000004",// Q4
+    rating: "entry.000000001", // Q1  rating 1-5
+    role: "entry.000000002",   // Q2  company / private / other
+    interest: "entry.000000003", // Q3  seller / buyer / both / not
+    comment: "entry.000000004",// Q4  free text
+    context: "entry.000000005",// Q5  lang/screen (auto)
   },
 };
 
@@ -33,9 +35,10 @@ const GF = {
   const L = {
     da: {
       open: "Feedback", title: "Hjælp os med Bygrest", sub: "30 sekunder. Anonymt.",
-      q1: "Hvad synes du om idéen?", q2: "Ville du bruge Bygrest?",
-      yes: "Ja", maybe: "Måske", no: "Nej",
-      q3: "Hvad mangler — eller hvad ville gøre det nyttigt for dig?",
+      q1: "Hvad synes du om idéen?",
+      q2: "Jeg er…", role_co: "Firma / håndværker", role_priv: "Privat", role_other: "Andet",
+      q3: "Interessant for mig som…", i_sell: "Sælger", i_buy: "Køber", i_both: "Begge", i_no: "Ikke relevant",
+      q4: "Hvad ville du udbyde eller købe — eller hvad stopper dig?",
       ph: "Skriv gerne et par ord (valgfrit)", send: "Send", later: "Senere",
       thanks: "Tak! 🙏", thanksb: "Din feedback hjælper os meget.",
       promptT: "Hvad synes du? 👀", promptB: "Del din reaktion på 30 sek.", promptBtn: "Giv feedback", dismiss: "Luk",
@@ -43,9 +46,10 @@ const GF = {
     },
     en: {
       open: "Feedback", title: "Help shape Bygrest", sub: "30 seconds. Anonymous.",
-      q1: "What do you think of the idea?", q2: "Would you use Bygrest?",
-      yes: "Yes", maybe: "Maybe", no: "No",
-      q3: "What's missing — or what would make it useful to you?",
+      q1: "What do you think of the idea?",
+      q2: "I am…", role_co: "Company / tradesperson", role_priv: "Private", role_other: "Other",
+      q3: "Interesting to me as…", i_sell: "Seller", i_buy: "Buyer", i_both: "Both", i_no: "Not for me",
+      q4: "What would you list or buy — or what stops you?",
       ph: "A few words (optional)", send: "Send", later: "Later",
       thanks: "Thanks! 🙏", thanksb: "Your feedback helps us a lot.",
       promptT: "What do you think? 👀", promptB: "Share your reaction in 30s.", promptBtn: "Give feedback", dismiss: "Dismiss",
@@ -56,7 +60,7 @@ const GF = {
   const tt = (k) => (L[lang()] || L.en)[k];
   const host = () => document.getElementById("screen") || document.body;
 
-  let rating = 0, intent = "";
+  let rating = 0, role = "", interest = "";
 
   // Hidden iframe so the Google Form POST doesn't navigate the page.
   function ensureSink() {
@@ -70,7 +74,7 @@ const GF = {
     if (rating === 0) { flash(tt("needStars")); return; }
     const comment = (document.getElementById("fb_comment") || {}).value || "";
     const context = `lang=${lang()} screen=${(typeof S !== "undefined" && S.route && S.route.view) || "?"} ua=${navigator.userAgent.slice(0, 60)}`;
-    const payload = { rating, intent: intent || "—", comment, context, at: new Date().toISOString() };
+    const payload = { rating, role: role || "—", interest: interest || "—", comment, context, at: new Date().toISOString() };
 
     if (GF.action && !GF.action.includes("FORM_ID")) {
       ensureSink();
@@ -78,7 +82,8 @@ const GF = {
       form.action = GF.action; form.method = "POST"; form.target = "gf_sink";
       const add = (name, val) => { const i = document.createElement("input"); i.type = "hidden"; i.name = name; i.value = val; form.appendChild(i); };
       add(GF.fields.rating, rating);
-      add(GF.fields.intent, intent || "—");
+      add(GF.fields.role, role || "—");
+      add(GF.fields.interest, interest || "—");
       add(GF.fields.comment, comment);
       add(GF.fields.context, context);
       document.body.appendChild(form); form.submit(); form.remove();
@@ -111,7 +116,7 @@ const GF = {
 
   function openForm() {
     close();
-    rating = 0; intent = "";
+    rating = 0; role = ""; interest = "";
     const m = document.createElement("div"); m.id = "fb_modal"; m.className = "fb-overlay";
     m.innerHTML = `<div class="fb-card">
       <div class="fb-head"><b>${tt("title")}</b><button class="fb-x" id="fb_x">✕</button></div>
@@ -121,13 +126,21 @@ const GF = {
       <div class="fb-stars" id="fb_stars">${[1,2,3,4,5].map(i => `<span data-star="${i}">☆</span>`).join("")}</div>
 
       <div class="fb-q">${tt("q2")}</div>
-      <div class="fb-seg" id="fb_intent">
-        <button data-intent="yes">${tt("yes")}</button>
-        <button data-intent="maybe">${tt("maybe")}</button>
-        <button data-intent="no">${tt("no")}</button>
+      <div class="fb-seg" id="fb_role">
+        <button data-role="company">${tt("role_co")}</button>
+        <button data-role="private">${tt("role_priv")}</button>
+        <button data-role="other">${tt("role_other")}</button>
       </div>
 
       <div class="fb-q">${tt("q3")}</div>
+      <div class="fb-seg fb-seg4" id="fb_interest">
+        <button data-int="seller">${tt("i_sell")}</button>
+        <button data-int="buyer">${tt("i_buy")}</button>
+        <button data-int="both">${tt("i_both")}</button>
+        <button data-int="no">${tt("i_no")}</button>
+      </div>
+
+      <div class="fb-q">${tt("q4")}</div>
       <textarea id="fb_comment" class="field" rows="3" placeholder="${tt("ph")}"></textarea>
 
       <div id="fb_err" class="fb-err"></div>
@@ -141,9 +154,13 @@ const GF = {
       m.querySelectorAll("#fb_stars span").forEach(x => x.textContent = (+x.dataset.star <= rating) ? "★" : "☆");
       flash("");
     });
-    m.querySelectorAll("#fb_intent button").forEach(b => b.onclick = () => {
-      intent = b.dataset.intent;
-      m.querySelectorAll("#fb_intent button").forEach(x => x.classList.toggle("on", x === b));
+    m.querySelectorAll("#fb_role button").forEach(b => b.onclick = () => {
+      role = b.dataset.role;
+      m.querySelectorAll("#fb_role button").forEach(x => x.classList.toggle("on", x === b));
+    });
+    m.querySelectorAll("#fb_interest button").forEach(b => b.onclick = () => {
+      interest = b.dataset.int;
+      m.querySelectorAll("#fb_interest button").forEach(x => x.classList.toggle("on", x === b));
     });
     m.querySelector("#fb_send").onclick = submit;
     m.querySelector("#fb_x").onclick = close;

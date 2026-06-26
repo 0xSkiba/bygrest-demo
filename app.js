@@ -39,7 +39,7 @@ const I18N = {
     "sell.c3": "Materialet indeholder ikke asbest, PCB, blymaling eller andre farlige stoffer.",
     "sell.c4": "Beskrivelsen og billederne er korrekte.",
     "sell.c5": "Afhentning og betaling aftales direkte med køberen.",
-    "sell.create": "Opret annonce", "sell.published": "Annonce oprettet!",
+    "sell.create": "Opret annonce", "sell.published": "Annonce oprettet!", "fb.cta": "Hjælp os — giv feedback",
     "sell.formidler": "Kun afhentning — ingen levering. Betaling aftales direkte med køber; Bygrest håndterer aldrig penge.",
     "sell.prohibited": "Forbudte materialer",
     "msg.empty": "Ingen beskeder endnu.", "chat.placeholder": "Besked",
@@ -101,7 +101,7 @@ const I18N = {
     "sell.c3": "The material does not contain asbestos, PCB, lead paint or other dangerous substances.",
     "sell.c4": "The description and photos are accurate.",
     "sell.c5": "Pickup and payment will be agreed directly with the buyer.",
-    "sell.create": "Create listing", "sell.published": "Listing created!",
+    "sell.create": "Create listing", "sell.published": "Listing created!", "fb.cta": "Help us — give feedback",
     "sell.formidler": "Pickup only — no delivery. Payment is arranged directly with the buyer; Bygrest never handles money.",
     "sell.prohibited": "Prohibited materials",
     "msg.empty": "No messages yet.", "chat.placeholder": "Message",
@@ -437,7 +437,8 @@ function renderSell() {
     body = `<div class="empty"><div class="glyph" style="color:var(--accent)">✅</div>
       <h2 style="margin:8px 0">${t("sell.published")}</h2>
       <p>${esc(SELL.draft.title)}</p>
-      <button class="btn primary" style="max-width:200px;margin-top:12px" data-act="sellDone">${t("common.done")}</button></div>`;
+      <button class="btn primary" style="max-width:240px;margin:12px auto 0" data-act="fbOpen">${t("fb.cta")}</button>
+      <button class="btn ghost" style="max-width:240px;margin:6px auto 0" data-act="sellDone">${t("common.done")}</button></div>`;
   }
   el("view").innerHTML = body;
 }
@@ -618,6 +619,7 @@ document.addEventListener("click", (e) => {
   else if (act === "freeToggle") { SELL.draft.free = !SELL.draft.free; if (SELL.draft.free) SELL.draft.price = 0; render(); }
   else if (act === "create") { SELL.step = 4; render(); }
   else if (act === "sellDone") { SELL.step = 1; go("feed"); }
+  else if (act === "fbOpen") { if (window.bygrestFeedback) window.bygrestFeedback.open(); }
   else if (act === "send") { const i = el("chatInput"); if (i && i.value.trim()) addChat(true, i.value.trim()); }
   else if (act === "about") { go("about"); }
   else if (act === "reviews") { go("reviews", { id: S.route.id }); }

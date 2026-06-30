@@ -242,9 +242,10 @@ function topbar(title, opts = {}) {
       <button class="icon-btn ${S.favOnly ? "active" : ""}" data-act="favToggle">♥${favN ? `<span class="badge-dot red">${favN}</span>` : ""}</button>
       <button class="icon-btn" data-act="layout">${S.layout === "grid" ? "☰" : "▦"}</button>`;
   }
-  return `${opts.feedControls ? langBtnLeft() : ""}<h1>${esc(title)}</h1>${right}`;
+  const logo = opts.feedControls ? `<img src="assets/icon.png" alt="" style="width:32px;height:32px;border-radius:8px">` : "";
+  return `${opts.feedControls ? langBtnLeft() : ""}${logo}<h1>${esc(title)}</h1>${right}`;
 }
-function langBtnLeft() { return `<button class="icon-btn lang" data-act="lang" style="margin-right:auto">${S.lang.toUpperCase()}</button>`; }
+function langBtnLeft() { return `<button class="icon-btn lang" data-act="lang">${S.lang.toUpperCase()}</button>`; }
 
 function tabbar() {
   const tabs = [

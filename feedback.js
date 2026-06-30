@@ -1,34 +1,8 @@
-/* Bygrest demo — feedback capture.
-   Native in-app form (anonymous, no respondent login → max conversion) that
-   posts to a Google Form in the background. Configure GF below.
-
-   ── HOW TO CONNECT (2 min, free, unlimited, anonymous) ───────────────────────
-   1. Create a Google Form (forms.google.com) with 5 questions IN THIS ORDER:
-        Q1  Short answer  — "Rating (1-5)"
-        Q2  Multiple choice — "I am"      options: Company/tradesperson / Private / Other
-        Q3  Multiple choice — "Interested as"  options: Seller / Buyer / Both / Not for me
-        Q4  Paragraph    — "What would you list or buy — or what stops you?"
-        Q5  Short answer  — "Context"   (language/screen, filled automatically)
-      In Settings, make sure "Collect email addresses" is OFF (anonymous).
-   2. Click the ⋮ menu → "Get pre-filled link", type dummy answers, "Get link".
-      The copied URL contains entry.NUMBERS for each question.
-   3. Paste the form id and the 4 entry numbers below.
-        - action: replace FORM_ID in the URL (keep /formResponse)
-        - fields: the entry.NNN values, matching the questions above
-   4. Re-deploy (push). Done — answers land in the Form's Responses tab / Sheet.
-   Until configured, the form still works in the demo and stores responses
-   locally (window/console) so you can test the UX.
+/* Bygrest demo — feedback capture via ntfy.sh (free, no signup, instant push).
+   Subscribe: https://ntfy.sh/bygrest-fb-0fc2690a99c57c35 (browser or ntfy app).
+   All responses also stored in localStorage as backup.
 */
-const GF = {
-  action: "",                  // e.g. "https://docs.google.com/forms/d/e/FORM_ID/formResponse"
-  fields: {
-    rating: "entry.000000001", // Q1  rating 1-5
-    role: "entry.000000002",   // Q2  company / private / other
-    interest: "entry.000000003", // Q3  seller / buyer / both / not
-    comment: "entry.000000004",// Q4  free text
-    context: "entry.000000005",// Q5  lang/screen (auto)
-  },
-};
+const NTFY_TOPIC = "bygrest-fb-0fc2690a99c57c35";
 
 (function () {
   // Bilingual copy (reuses the demo's current language via global S).
@@ -62,37 +36,31 @@ const GF = {
 
   let rating = 0, role = "", interest = "";
 
-  // Hidden iframe so the Google Form POST doesn't navigate the page.
-  function ensureSink() {
-    if (document.getElementById("gf_sink")) return;
-    const f = document.createElement("iframe");
-    f.id = "gf_sink"; f.name = "gf_sink"; f.style.display = "none";
-    document.body.appendChild(f);
-  }
-
   function submit() {
     if (rating === 0) { flash(tt("needStars")); return; }
     const comment = (document.getElementById("fb_comment") || {}).value || "";
     const context = `lang=${lang()} screen=${(typeof S !== "undefined" && S.route && S.route.view) || "?"} ua=${navigator.userAgent.slice(0, 60)}`;
     const payload = { rating, role: role || "—", interest: interest || "—", comment, context, at: new Date().toISOString() };
 
-    if (GF.action && !GF.action.includes("FORM_ID")) {
-      ensureSink();
-      const form = document.createElement("form");
-      form.action = GF.action; form.method = "POST"; form.target = "gf_sink";
-      const add = (name, val) => { const i = document.createElement("input"); i.type = "hidden"; i.name = name; i.value = val; form.appendChild(i); };
-      add(GF.fields.rating, rating);
-      add(GF.fields.role, role || "—");
-      add(GF.fields.interest, interest || "—");
-      add(GF.fields.comment, comment);
-      add(GF.fields.context, context);
-      document.body.appendChild(form); form.submit(); form.remove();
-    } else {
-      // Demo mode — keep responses locally so the UX is testable.
-      const all = JSON.parse(localStorage.getItem("bg_feedback") || "[]");
-      all.push(payload); localStorage.setItem("bg_feedback", JSON.stringify(all));
-      console.log("[Bygrest feedback] (demo mode, not sent):", payload);
-    }
+    // Always persist locally as backup.
+    const all = JSON.parse(localStorage.getItem("bg_feedback") || "[]");
+    all.push(payload); localStorage.setItem("bg_feedback", JSON.stringify(all));
+
+    // Send via ntfy.sh (free push notifications, no account needed).
+    const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+    const body = [
+      `${stars}  (${rating}/5)`,
+      `Role: ${role || "—"}`,
+      `Interest: ${interest || "—"}`,
+      comment ? `Comment: ${comment}` : "",
+      `Context: ${context}`,
+    ].filter(Boolean).join("\n");
+
+    fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
+      method: "POST",
+      headers: { "Title": "Bygrest feedback", "Tags": "memo,construction_worker" },
+      body,
+    }).catch(() => console.log("[Bygrest feedback] ntfy send failed, saved locally"));
     localStorage.setItem("bg_fb_done", "1");
     showThanks();
   }
